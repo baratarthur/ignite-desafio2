@@ -8,21 +8,67 @@ app.use(express.json());
 app.use(cors());
 
 const users = [];
+const FREMIUM_LIMIT = 10;
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+
+  const user = users.find(user => user.username === username);
+
+  if (user) {
+    request.user = user;
+    return next();
+  }
+
+  return response.status(404).json({erro: "User doesn't exist"});
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+
+  if (user.pro || (!user.pro && user.todos.length <= FREMIUM_LIMIT)) {
+    next();
+  }
+
+  return response.status(403).json({error: "Todo's limit exceded"});
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+  const { username } = request.headers;
+  const isValidUUID = validate(id);
+
+  if(!isValidUUID) {
+    return response.status(400).json({ error: "UUID not valid" });
+  }
+
+  const user = users.find(user => user.username === username);
+  
+  if(!user) {
+    return response.status(404).json({ error: "User not found" });
+  }
+  
+  const todo = user.todos.find(todo => todo.id === id);
+
+  if(!todo) {
+    return response.status(404).json({ error: "Todo not found" });
+  }
+
+  request.user = user
+  request.todo = todo;
+  next();
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+  const user = users.find(user => user.id === id);
+
+  if(!user) {
+    return response.status(404).json({ error: "User not found" });
+  }
+
+  request.user = user
+  next();
 }
 
 app.post('/users', (request, response) => {
